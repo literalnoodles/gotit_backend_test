@@ -74,7 +74,7 @@
 ```
 * Show list all posts in homepage. All likes will be sorted from latest to oldest order
 ```
-[GET] /api/posts
+[GET] /api/posts?page=1
 ```
 * Show all posts by a specific user
 ```
