@@ -27,7 +27,7 @@
 ```console
   pipenv run uvicorn main:app
 ```
-* Now we can go to <a href="localhost:8000/docs" target="_blank">localhost:8000/docs</a> to see all the api
+* Now we can go to <a href="http://localhost:8000/docs" target="_blank">localhost:8000/docs</a> to see all the api
 ### **Explain**
 * Register new account
 ```
