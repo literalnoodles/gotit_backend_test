@@ -1,0 +1,2 @@
+class RequiresExtraInfoException(Exception):
+    pass
