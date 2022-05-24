@@ -46,7 +46,7 @@ After that, open browser console, get the access_token and send to correspond ur
   "access_token": "facebook_access_token"
 }
 ```
--> After this step save access the `access_token` and fill in `Authorize`
+-> After this step save the `access_token` and fill in `Authorize`
 
 ![authorize](./docs/authorize.JPG)
 
