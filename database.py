@@ -12,8 +12,14 @@ DB_PW = _env("DB_PW")
 DB_HOST = _env("DB_HOST")
 DB_PORT = int(_env("DB_PORT"))
 
-db_state_default = {"closed": None, "conn": None, "ctx": None, "transactions": None}
+db_state_default = {
+    "closed": None,
+    "conn": None,
+    "ctx": None,
+    "transactions": None}
 db_state = ContextVar("db_state", default=db_state_default.copy())
+
+
 class PeeweeConnectionState(peewee._ConnectionState):
     def __init__(self, **kwargs):
         super().__setattr__("_state", db_state)
@@ -24,6 +30,7 @@ class PeeweeConnectionState(peewee._ConnectionState):
 
     def __getattr__(self, name):
         return self._state.get()[name]
+
 
 db = peewee.MySQLDatabase(
     DB_NAME,

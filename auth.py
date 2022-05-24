@@ -9,6 +9,7 @@ from exception import RequiresExtraInfoException
 from models import User
 from datetime import datetime, timedelta
 
+
 class AuthHandler():
     security = HTTPBearer()
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -42,10 +43,14 @@ class AuthHandler():
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-    def auth_wrapper(self, auth: HTTPAuthorizationCredentials = Security(security)):
+    def auth_wrapper(
+            self,
+            auth: HTTPAuthorizationCredentials = Security(security)):
         return self.decode_token(auth.credentials)
 
-    def verify_information(self, auth: HTTPAuthorizationCredentials = Security(security)):
+    def verify_information(
+            self,
+            auth: HTTPAuthorizationCredentials = Security(security)):
         if not self.user:
             self.user = self.decode_token(auth.credentials)
         # if not add extra information -> redirect to form

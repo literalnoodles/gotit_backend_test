@@ -15,20 +15,24 @@ class User(peewee.Model):
     class Meta:
         database = db
 
+
 class Post(peewee.Model):
     id = peewee.IntegerField(primary_key=True)
     title = peewee.CharField()
     body = peewee.TextField()
     author = peewee.IntegerField()
     created = peewee.DateTimeField()
+
     class Meta:
-        database=db
+        database = db
+
 
 class PostLike(peewee.Model):
     id = peewee.IntegerField(primary_key=True)
     post_id = peewee.IntegerField()
     user_id = peewee.IntegerField()
     created = peewee.DateTimeField()
+
     class Meta:
-        database=db
-        table_name="Post_Like"
+        database = db
+        table_name = "Post_Like"

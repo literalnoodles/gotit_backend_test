@@ -28,9 +28,10 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 app = FastAPI()
 auth_handler = AuthHandler()
 
+
 @app.get('/login', response_class=HTMLResponse, include_in_schema=False)
 def login():
-    return  """
+    return """
         <html>
             <head>
                 <title>Login</title>
@@ -49,7 +50,7 @@ def login():
                     data-shape="rectangular"
                     data-logo_alignment="left">
                 </div>
-                <fb:login-button 
+                <fb:login-button
                     scope="public_profile,email"
                     onlogin="checkLoginState();">
                 </fb:login-button>
@@ -66,7 +67,7 @@ def login():
                             xfbml      : true,
                             version    : 'v13.0'
                         });
-                        
+
                         FB.AppEvents.logPageView();
                     };
 
@@ -94,18 +95,22 @@ def login():
 
 # ------------------------ Handle Accounts ------------------------ #
 
+
 @app.post('/api/login/google')
 def login_google(credentials: Credentials):
     access_token = credentials.access_token
     # verify google token
     try:
-        idinfo = id_token.verify_oauth2_token(access_token, requests.Request(), GOOGLE_CLIENT_ID)
+        idinfo = id_token.verify_oauth2_token(
+            access_token, requests.Request(), GOOGLE_CLIENT_ID)
         # check if email is already exists in database
         exists_user = (User.select()
-                        .where(User.email == idinfo["email"])
-                        .first())
+                       .where(User.email == idinfo["email"])
+                       .first())
         if exists_user and exists_user.platform == "facebook":
-            raise HTTPException(status_code=400, detail="This email is already exists")
+            raise HTTPException(
+                status_code=400,
+                detail="This email is already exists")
         if not exists_user:
             # register new user to database
             db_user = User(
@@ -119,23 +124,27 @@ def login_google(credentials: Credentials):
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+
 @app.post('/api/login/facebook')
 def login_facebook(credentials: Credentials):
     access_token = credentials.access_token
     try:
-        res = rq.get("https://graph.facebook.com/me?access_token=&fields=email", params={
-            "access_token": access_token,
-            "fields": "email"
-        })
-        
+        res = rq.get(
+            "https://graph.facebook.com/me?access_token=&fields=email",
+            params={
+                "access_token": access_token,
+                "fields": "email"})
+
         res.raise_for_status()
         info = res.json()
         # check if email is already exists in database
         exists_user = (User.select()
-                        .where(User.email == info["email"])
-                        .first())
+                       .where(User.email == info["email"])
+                       .first())
         if exists_user and exists_user.platform == "google":
-            raise HTTPException(status_code=400, detail="This email is already exists")
+            raise HTTPException(
+                status_code=400,
+                detail="This email is already exists")
         if not exists_user:
             # register new user to database
             db_user = User(
@@ -152,8 +161,8 @@ def login_facebook(credentials: Credentials):
 
 @app.patch('/api/users/self', status_code=204)
 def add_information(
-    details: AdditionalInfo, # payload
-    user_info=Depends(auth_handler.auth_wrapper) # authentication
+    details: AdditionalInfo,  # payload
+    user_info=Depends(auth_handler.auth_wrapper)  # authentication
 ):
     # validate user id
     user = (User.select()
@@ -162,9 +171,12 @@ def add_information(
     if not details.name:
         raise HTTPException(status_code=400, detail="You need to provide name")
     if user.platform == "facebook" and not details.phone_number:
-        raise HTTPException(status_code=400, detail="You need to provide phone number")
+        raise HTTPException(status_code=400,
+                            detail="You need to provide phone number")
     if user.platform == "google" and not details.occupation:
-        raise HTTPException(status_code=400, detail="You need to provide occupation information")
+        raise HTTPException(
+            status_code=400,
+            detail="You need to provide occupation information")
     user.name = details.name
     if details.phone_number:
         user.phone_number = details.phone_number
@@ -175,10 +187,12 @@ def add_information(
 
 # ------------------------ Handle Posts ------------------------ #
 
-@app.post('/api/posts', dependencies=[Depends(auth_handler.verify_information)])
+
+@app.post('/api/posts',
+          dependencies=[Depends(auth_handler.verify_information)])
 def create_post(
     post_data: PostCreate,
-    user_info=Depends(auth_handler.auth_wrapper) # authentication
+    user_info=Depends(auth_handler.auth_wrapper)  # authentication
 ):
     """
         Create a new post
@@ -191,18 +205,22 @@ def create_post(
     new_post.save()
     return model_to_dict(new_post)
 
-@app.post('/api/posts/{post_id}/likes', dependencies=[Depends(auth_handler.verify_information)])
+
+@app.post('/api/posts/{post_id}/likes',
+          dependencies=[Depends(auth_handler.verify_information)])
 def like_post(
     post_id,
-    user_info=Depends(auth_handler.auth_wrapper) # authentication
+    user_info=Depends(auth_handler.auth_wrapper)  # authentication
 ):
     """
         Like post
     """
     # check if post exists
-    post = Post.select().where(Post.id==post_id).first()
+    post = Post.select().where(Post.id == post_id).first()
     if not post:
-        raise HTTPException(status_code=401, detail="This post does not exists")
+        raise HTTPException(
+            status_code=401,
+            detail="This post does not exists")
     # check if user already like the post
     post_like = (PostLike.select()
                          .where(PostLike.post_id == post_id)
@@ -216,6 +234,7 @@ def like_post(
     )
     new_like.save()
     return model_to_dict(new_like)
+
 
 @app.get('/api/posts', dependencies=[
     Depends(auth_handler.auth_wrapper),
@@ -237,20 +256,24 @@ def list_posts(
             Post.body,
             Post.created,
             likes_subquery.c.likes,
-        )
-        .join(User, on=Post.author == User.id)
-        .join(likes_subquery, JOIN.LEFT_OUTER, on=likes_subquery.c.post_id == Post.id)
-        .order_by(Post.created)
-        .group_by(Post.id)
-        .paginate(page, items_per_page)
-        .dicts()
-    )
+        ) .join(
+            User,
+            on=Post.author == User.id) .join(
+                likes_subquery,
+                JOIN.LEFT_OUTER,
+                on=likes_subquery.c.post_id == Post.id) .order_by(
+                    Post.created) .group_by(
+                        Post.id) .paginate(
+                            page,
+            items_per_page) .dicts())
 
     # add short description and likes for each post
     for post in posts:
-        post["likes"] = json.loads('[' + post["likes"] + ']') if post["likes"] else []
+        post["likes"] = json.loads(
+            '[' + post["likes"] + ']') if post["likes"] else []
         post["short_description"] = post["body"][:100]
     return [post for post in posts]
+
 
 @app.get("/api/users/{user_id}/posts", dependencies=[
     Depends(auth_handler.auth_wrapper),
@@ -270,21 +293,23 @@ def list_posts_for_user(
             Post.title,
             Post.body,
             Post.created,
-            likes_subquery.c.likes
-        )
-        .join(User, on=Post.author == User.id)
-        .join(likes_subquery, JOIN.LEFT_OUTER, on=likes_subquery.c.post_id == Post.id)
-        .where(Post.author == user_id)
-        .order_by(Post.created)
-        .dicts()
-    )
+            likes_subquery.c.likes) .join(
+            User,
+            on=Post.author == User.id) .join(
+                likes_subquery,
+                JOIN.LEFT_OUTER,
+                on=likes_subquery.c.post_id == Post.id) .where(
+                    Post.author == user_id) .order_by(
+                        Post.created) .dicts())
     # adding short description for each posts
     for post in posts:
-        post["likes"] = json.loads('[' + post["likes"] + ']') if post["likes"] else []
+        post["likes"] = json.loads(
+            '[' + post["likes"] + ']') if post["likes"] else []
         post["short_description"] = post["body"][:100]
     return [post for post in posts]
 
-@app.get("/api/posts/{post_id}",dependencies=[
+
+@app.get("/api/posts/{post_id}", dependencies=[
     Depends(auth_handler.auth_wrapper),
     Depends(auth_handler.verify_information)
 ])
@@ -301,13 +326,13 @@ def get_post(
             Post.title,
             Post.body,
             Post.created,
-            likes_subquery.c.likes
-        )
-        .join(User, on=Post.author == User.id)
-        .join(likes_subquery, JOIN.LEFT_OUTER, on=likes_subquery.c.post_id == Post.id)
-        .where(Post.id == post_id)
-        .dicts()
-    )
+            likes_subquery.c.likes) .join(
+            User,
+            on=Post.author == User.id) .join(
+                likes_subquery,
+                JOIN.LEFT_OUTER,
+                on=likes_subquery.c.post_id == Post.id) .where(
+                    Post.id == post_id) .dicts())
 
     posts = [post for post in posts]
     if not posts:
@@ -315,7 +340,8 @@ def get_post(
     post = posts[0]
 
     # adding short description for post
-    post["likes"] = json.loads('[' + post["likes"] + ']') if post["likes"] else []
+    post["likes"] = json.loads(
+        '[' + post["likes"] + ']') if post["likes"] else []
     post["short_description"] = post["body"][:100]
     return post
 
@@ -329,7 +355,11 @@ async def exception_handler(request: Request, exc: RequiresExtraInfoException) -
 
 # handle extra information form
 # this should be a frontend page so I only implemented as a placeholder
-@app.get('/user/extra_information', response_class=HTMLResponse, include_in_schema=False)
+
+
+@app.get('/user/extra_information',
+         response_class=HTMLResponse,
+         include_in_schema=False)
 def extra_information():
     """
         frontend form url
@@ -350,7 +380,7 @@ def extra_information():
                     <input type="text" id="occupation" name="occupation"><br>
                     <br>
                     <input type="submit" value="Submit">
-                </form> 
+                </form>
             </body>
         </html>
     """

@@ -14,5 +14,6 @@ pymysql = "*"
 bcrypt = "*"
 google-auth = "*"
 requests = "*"
+autopep8 = "*"
 
 [dev-packages]
