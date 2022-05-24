@@ -14,17 +14,11 @@ class AuthHandler():
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     secret = "SECRET"
 
-    def get_password_hash(self, password):
-        return self.pwd_context.hash(password)
-
-    def verify_password(self, org_password, hashed_password):
-        return self.pwd_context.verify(org_password, hashed_password)
-
-    def encode_token(self, user_id):
+    def encode_token(self, user_email):
         payload = {
             "exp": datetime.utcnow() + timedelta(days=0, minutes=300),
             "iat": datetime.utcnow(),
-            "sub": user_id
+            "sub": user_email
         }
 
         return jwt.encode(
@@ -37,7 +31,7 @@ class AuthHandler():
         try:
             payload = jwt.decode(token, self.secret, algorithms=['HS256'])
             user = (User.select()
-                        .where(User.id == payload['sub'])
+                        .where(User.email == payload['sub'])
                         .first())
             if not user:
                 raise HTTPException(status_code=401, detail="User not exists")

@@ -12,5 +12,7 @@ passlib = "*"
 peewee = "*"
 pymysql = "*"
 bcrypt = "*"
+google-auth = "*"
+requests = "*"
 
 [dev-packages]

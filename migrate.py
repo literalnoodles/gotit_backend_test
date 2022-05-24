@@ -6,7 +6,6 @@ migration_sqls = [
         CREATE TABLE IF NOT EXISTS User (
             id int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
             email VARCHAR(50) not null,
-            password VARCHAR(100) not null,
             platform VARCHAR(20) not null,
             name VARCHAR(50),
             phone_number VARCHAR(20),

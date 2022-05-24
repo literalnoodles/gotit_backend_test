@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class Credentials(BaseModel):
+    access_token: str
+
 class RegisterInfo(BaseModel):
     email: str
     password: str

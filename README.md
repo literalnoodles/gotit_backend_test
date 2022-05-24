@@ -29,21 +29,21 @@
 ```
 * Now we can go to <a href="http://localhost:8000/docs" target="_blank">localhost:8000/docs</a> to see all the api
 ### **Explain**
-* Register new account
+* To login to system
+
+Go to <a href="http://localhost:8000/login" target="_blank">localhost:8000/login</a> and try login using `google` or `facebook` button.
+
+After that, open browser console, use the access_token and send to correspond url
 ```
-[POST] /api/users
+[POST] /api/login/google
 {
-  "email": "abc@gmail.com",
-  "password": "password",
-  "platform": "google"
+  "access_token": "token"
 }
 ```
-* To login to system
 ```
-[POST] /api/users/login
+[POST] /api/login/facebook
 {
-  "email": "abc@gmail.com",
-  "password": "password"
+  "access_token": "token"
 }
 ```
 -> After this step save access the `access_token` and fill in `Authorize`

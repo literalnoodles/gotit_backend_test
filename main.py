@@ -1,3 +1,4 @@
+from cmath import inf
 import json
 from fastapi import Depends, HTTPException, Request, Response
 from fastapi import FastAPI
@@ -7,8 +8,7 @@ from playhouse.shortcuts import model_to_dict
 from peewee import JOIN
 from exception import RequiresExtraInfoException
 from schemas import (
-    RegisterInfo,
-    LoginInfo,
+    Credentials,
     AdditionalInfo,
     PostCreate
 )
@@ -18,34 +18,137 @@ from models import (
     PostLike
 )
 from helper import get_likes_subquery
-
+from google.oauth2 import id_token
+from google.auth.transport import requests
+import requests as rq
+from dotenv import load_dotenv
+import os
+load_dotenv()
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 app = FastAPI()
 auth_handler = AuthHandler()
 
+@app.get('/login', response_class=HTMLResponse, include_in_schema=False)
+def login():
+    return  """
+        <html>
+            <head>
+                <title>Login</title>
+            </head>
+            <body>
+                <script src="https://accounts.google.com/gsi/client" async defer></script>
+                <div id="g_id_onload"
+                    data-client_id="759432235722-upj1ssj87tght2ciova3kskgd44q9k3n.apps.googleusercontent.com"
+                    data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin"
+                    data-type="standard"
+                    data-size="large"
+                    data-theme="outline"
+                    data-text="sign_in_with"
+                    data-shape="rectangular"
+                    data-logo_alignment="left">
+                </div>
+                <fb:login-button 
+                    scope="public_profile,email"
+                    onlogin="checkLoginState();">
+                </fb:login-button>
+                <script>
+                    function handleCredentialResponse(response) {
+                        console.log({google_access_token: response.credential})
+                    }
+                </script>
+                <script>
+                    window.fbAsyncInit = function() {
+                        FB.init({
+                            appId      : '473728743238650',
+                            cookie     : true,
+                            xfbml      : true,
+                            version    : 'v13.0'
+                        });
+                        
+                        FB.AppEvents.logPageView();
+                    };
+
+                    function checkLoginState() {
+                        FB.getLoginStatus(function(response) {
+                            statusChangeCallback(response);
+                        });
+                    }
+
+                    function statusChangeCallback(response) {
+                        console.log({facebook_access_token: response.authResponse.accessToken})
+                    }
+
+                    (function(d, s, id){
+                        var js, fjs = d.getElementsByTagName(s)[0];
+                        if (d.getElementById(id)) {return;}
+                        js = d.createElement(s); js.id = id;
+                        js.src = "https://connect.facebook.net/en_US/sdk.js";
+                        fjs.parentNode.insertBefore(js, fjs);
+                    }(document, 'script', 'facebook-jssdk'));
+                </script>
+            </body>
+        </html>
+    """
+
 # ------------------------ Handle Accounts ------------------------ #
-@app.post('/api/users', status_code=201)
-def register(details: RegisterInfo):
-    """
-        Register new user
-    """
-    if not details.password or not details.email:
-        raise HTTPException(status_code=400, detail="You need to provide email and/or password")
-    if details.platform not in ['facebook', 'google']:
-        raise HTTPException(status_code=400, detail="Platform should be facebook or google")
-    # check if email is already exists in database
-    count_exists_user = (User.select()
-                             .where(User.email == details.email)
-                             .count())
-    if count_exists_user:
-        raise HTTPException(status_code=400, detail="This email is already exists")
-    # else register new user to database
-    db_user = User(
-        email=details.email,
-        password=auth_handler.get_password_hash(details.password),
-        platform=details.platform
-    )
-    db_user.save()
-    return model_to_dict(db_user)
+
+@app.post('/api/login/google')
+def login_google(credentials: Credentials):
+    access_token = credentials.access_token
+    # verify google token
+    try:
+        idinfo = id_token.verify_oauth2_token(access_token, requests.Request(), GOOGLE_CLIENT_ID)
+        # check if email is already exists in database
+        exists_user = (User.select()
+                        .where(User.email == idinfo["email"])
+                        .first())
+        if exists_user and exists_user.platform == "facebook":
+            raise HTTPException(status_code=400, detail="This email is already exists")
+        if not exists_user:
+            # register new user to database
+            db_user = User(
+                email=idinfo["email"],
+                platform="google"
+            )
+            db_user.save()
+        # return access_token for user
+        token = auth_handler.encode_token(idinfo["email"])
+        return {"access_token": token}
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+@app.post('/api/login/facebook')
+def login_facebook(credentials: Credentials):
+    access_token = credentials.access_token
+    try:
+        res = rq.get("https://graph.facebook.com/me?access_token=&fields=email", params={
+            "access_token": access_token,
+            "fields": "email"
+        })
+        
+        res.raise_for_status()
+        info = res.json()
+        # check if email is already exists in database
+        exists_user = (User.select()
+                        .where(User.email == info["email"])
+                        .first())
+        if exists_user and exists_user.platform == "google":
+            raise HTTPException(status_code=400, detail="This email is already exists")
+        if not exists_user:
+            # register new user to database
+            db_user = User(
+                email=info["email"],
+                platform="facebook"
+            )
+            db_user.save()
+        # return access_token for user
+        token = auth_handler.encode_token(info["email"])
+        return {"access_token": token}
+    except rq.exceptions.HTTPError as e:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 
 @app.patch('/api/users/self', status_code=204)
 def add_information(
@@ -69,20 +172,6 @@ def add_information(
         user.occupation = details.occupation
     user.save()
     return Response(status_code=204)
-
-@app.post('/api/users/login')
-def login(details: LoginInfo):
-    """
-        Login user and get access token
-    """
-    # check password
-    user = (User.select()
-                .where(User.email == details.email)
-                .first())
-    if not user or not auth_handler.verify_password(details.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-    token = auth_handler.encode_token(user.id)
-    return {"access_token": token}
 
 # ------------------------ Handle Posts ------------------------ #
 

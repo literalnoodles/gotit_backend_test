@@ -7,7 +7,6 @@ from database import db
 class User(peewee.Model):
     id = peewee.IntegerField(primary_key=True)
     email = peewee.CharField()
-    password = peewee.CharField()
     platform = peewee.CharField()
     name = peewee.CharField()
     phone_number = peewee.CharField()
