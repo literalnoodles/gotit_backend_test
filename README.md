@@ -33,17 +33,17 @@
 
 Go to <a href="http://localhost:8000/login" target="_blank">localhost:8000/login</a> and try login using `google` or `facebook` button.
 
-After that, open browser console, use the access_token and send to correspond url
+After that, open browser console, get the access_token and send to correspond url
 ```
 [POST] /api/login/google
 {
-  "access_token": "token"
+  "access_token": "google_access_token"
 }
 ```
 ```
 [POST] /api/login/facebook
 {
-  "access_token": "token"
+  "access_token": "facebook_access_token"
 }
 ```
 -> After this step save access the `access_token` and fill in `Authorize`
