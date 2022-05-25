@@ -25,6 +25,8 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID")
+FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET")
 app = FastAPI()
 auth_handler = AuthHandler()
 
@@ -129,6 +131,30 @@ def login_google(credentials: Credentials):
 def login_facebook(credentials: Credentials):
     access_token = credentials.access_token
     try:
+        # get app access_token first
+        res = rq.get("https://graph.facebook.com/oauth/access_token",
+            params={
+                "client_id": FACEBOOK_APP_ID,
+                "client_secret": FACEBOOK_APP_SECRET,
+                "grant_type": "client_credentials"})
+        res.raise_for_status()
+        res = res.json()
+        if "access_token" not in res:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid token")
+        app_access_token = res["access_token"]
+        # verify app_id in access_token sent from client
+        res = rq.get("https://graph.facebook.com/debug_token",
+            params={
+                "input_token": access_token,
+                "access_token": app_access_token})
+        res.raise_for_status()
+        res = res.json()
+        if not res.get("data") and res.get("data").get("app_id") != FACEBOOK_APP_ID:
+            raise HTTPException(
+                status_code=401,
+                detail="Not authorized")
         res = rq.get(
             "https://graph.facebook.com/me?access_token=&fields=email",
             params={

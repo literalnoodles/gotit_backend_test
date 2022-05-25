@@ -18,7 +18,7 @@
   pipenv install
 ```
 * Create a database name `backend_test`
-* Change content of .env file to correct database information (user, password, host, port)
+* Change content of .env file to correct database information (user, password, host, port, google, facebook oauth information)
 * Run migrate database
 ```console
   pipenv run python migrate.py
